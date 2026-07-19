@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/*
+  Design tokens - "late-evening conversation" palette.
+  Everything in the app pulls from these; change a value here
+  and it updates everywhere it's used.
+*/
+@theme {
+  --color-deep: #1e1b2e;       /* main background */
+  --color-surface: #2a2440;    /* message bubbles, cards */
+  --color-surface-2: #352d4d;  /* input bar, raised elements */
+  --color-warm: #e8927c;       /* companion's presence, warmth */
+  --color-calm: #7fa8a0;       /* secondary accent, session dividers */
+  --color-cream: #f3eee7;      /* primary text */
+  --color-muted: #a79fbd;      /* secondary text, timestamps */
+
+  --font-display: "Fraunces", serif;
+  --font-body: "Plus Jakarta Sans", sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overscroll-behavior-y: none;
+}
+
+body {
+  background-color: var(--color-deep);
+  color: var(--color-cream);
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* thin, quiet scrollbar for the chat stream */
+.chat-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-surface-2);
+  border-radius: 4px;
+}
+
+/* gentle pulse used once, on the newest session divider only */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+.divider-glow {
+  animation: glow-pulse 3.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

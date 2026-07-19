@@ -1,0 +1,28 @@
+// firestore.rules
+//
+// This is NOT applied automatically - paste this into the Firebase
+// Console under Firestore Database -> Rules, and click Publish. Without
+// this, your Firestore data defaults to either fully open or fully
+// locked, depending on which starting mode you picked when creating the
+// database, and neither of those is what you want.
+//
+// What this enforces: a signed-in user can only ever read or write their
+// own document and their own messages subcollection - never anyone
+// else's, even though (per backend/README.md) the backend's own
+// per-account scoping trusts the client rather than verifying tokens.
+// This is the layer that actually makes that safe: Firestore itself
+// refuses any request that doesn't belong to the signed-in user, no
+// matter what the request claims.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+  }
+}

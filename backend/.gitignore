@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+venv/
+.venv/
+env/
+.env
+.env.local
+
+# Phase 3: generated data, not source - everyone's local copy is their own
+companion.db
+chroma_data/
+
+.DS_Store

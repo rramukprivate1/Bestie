@@ -1,0 +1,15 @@
+# Local development only. Brings up the backend in a container.
+# Usage: docker compose up --build
+#
+# The frontend is NOT included here on purpose - keep running it with
+# `npm run dev` in frontend/ as usual, outside Docker, for fast reloads.
+# This file grows in Phase 3 to add the vector database and a local
+# Postgres instance alongside the backend.
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./backend/.env
