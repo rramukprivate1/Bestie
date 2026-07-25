@@ -117,3 +117,43 @@ def test_two_users_memories_never_mix(monkeypatch):
     )
 
     assert "past conversations" not in captured_prompts[-1]
+
+
+def test_retries_once_when_reply_is_empty_after_stripping_the_tag(monkeypatch):
+    """Reproduces the bug from a real screenshot: a malformed/truncated tag
+    left nothing behind after stripping, and that empty string used to get
+    sent to the frontend as if it were a real reply."""
+
+    call_count = {"n": 0}
+
+    async def fake_generate_reply(system_instruction, history, new_message, temperature=0.85):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            return "###EM"  # first attempt: nothing usable, just a mangled tag
+        return "Sorry about that - I'm here now.\n###EMOTION:calm###"
+
+    monkeypatch.setattr("app.routes.chat.generate_reply", fake_generate_reply)
+
+    response = client.post(
+        "/chat",
+        json={"user_id": "user-e", "message_id": "msg-1", "message_count": 0, "message": "hello?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"reply": "Sorry about that - I'm here now."}
+    assert call_count["n"] == 2
+
+
+def test_gives_a_clear_error_if_every_retry_comes_back_empty(monkeypatch):
+    async def fake_generate_reply(system_instruction, history, new_message, temperature=0.85):
+        return "###EM"  # every attempt fails to produce usable text
+
+    monkeypatch.setattr("app.routes.chat.generate_reply", fake_generate_reply)
+
+    response = client.post(
+        "/chat",
+        json={"user_id": "user-f", "message_id": "msg-1", "message_count": 0, "message": "hello?"},
+    )
+
+    assert response.status_code == 502
+    assert "EMPTY_REPLY" in response.json()["detail"]

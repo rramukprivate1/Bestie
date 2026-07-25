@@ -9,9 +9,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import chat, voice
+from app.routes import chat, voice, mood, journal
 
-app = FastAPI(title="Companion API", version="0.4.1")
+app = FastAPI(title="Companion API", version="0.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +23,8 @@ app.add_middleware(
 
 app.include_router(chat.router)
 app.include_router(voice.router)
+app.include_router(mood.router)
+app.include_router(journal.router)
 
 
 @app.get("/health")

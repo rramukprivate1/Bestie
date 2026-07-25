@@ -26,7 +26,7 @@ export default function ChatWindow({ chat, onLogout }) {
 
     if (!justFinished || !voiceMode) return;
     const last = messages[messages.length - 1];
-    if (!last || last.role !== 'assistant') return;
+    if (!last || last.role !== 'assistant' || !last.text.trim()) return;
 
     speakText(last.text)
       .then((audio) => audio.play())

@@ -29,6 +29,31 @@ def test_missing_tag_returns_original_text_and_no_emotion():
     assert emotion is None
 
 
+def test_partial_or_malformed_tag_is_still_stripped():
+    # Exactly the bug seen in practice: a cut-short tag with no way to
+    # parse an emotion out of it should still never leak into the reply.
+    raw = "100% okay. Please don't worry.\n###EM"
+    clean, emotion = extract_emotion_tag(raw)
+    assert clean == "100% okay. Please don't worry."
+    assert emotion is None
+
+
+def test_partial_tag_variants_all_get_stripped():
+    for fragment in ["###EMOTION", "###EMOTION:", "###EMOTION:anx"]:
+        clean, _ = extract_emotion_tag(f"Hey there.\n{fragment}")
+        assert clean == "Hey there."
+        assert "###" not in clean
+
+
+def test_triple_hash_mid_sentence_is_left_alone():
+    # The defensive fallback is end-anchored - it should never eat real
+    # content that isn't actually a trailing tag fragment.
+    raw = "I use ### as a divider sometimes, just so you know."
+    clean, emotion = extract_emotion_tag(raw)
+    assert clean == raw
+    assert emotion is None
+
+
 def test_chat_endpoint_only_calls_the_llm_once_per_message(monkeypatch):
     """Confirms the actual fix: one user message should mean exactly one
     Gemini call, not two (main reply + a separate emotion classification)."""

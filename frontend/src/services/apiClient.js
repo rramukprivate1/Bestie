@@ -58,3 +58,28 @@ export async function sendMessage({
   const data = await response.json();
   return data.reply;
 }
+
+/** Fetches day-by-day emotion data for the Insights view's mood strip. */
+export async function getMoodSummary(userId, days = 14) {
+  const response = await fetch(`${API_BASE}/mood-summary?user_id=${encodeURIComponent(userId)}&days=${days}`);
+  if (!response.ok) {
+    throw new Error(`Could not load mood history (status ${response.status})`);
+  }
+  const data = await response.json();
+  return data.days;
+}
+
+/** Embeds a journal entry or saved quote into memory so it can come up naturally in conversation. */
+export async function indexJournalEntry(userId, entryId, text, entryType = 'entry') {
+  try {
+    await fetch(`${API_BASE}/index-journal`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, entry_id: entryId, text, entry_type: entryType }),
+    });
+  } catch {
+    // Best-effort - the entry is already safely saved in Firestore by the
+    // time this runs, so a failed index here just means it won't come up
+    // in conversation on its own, not that anything was lost.
+  }
+}

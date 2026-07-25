@@ -9,11 +9,16 @@ response, so a message can be read silently, replayed, or never spoken
 at all without the backend needing to know which.
 """
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.services.voice_client import transcribe_audio, synthesize_speech
+from app.services.groq_client import transcribe_audio_groq
+from app.config import settings
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -38,6 +43,22 @@ class SpeakResponse(BaseModel):
 
 @router.post("/transcribe", response_model=TranscribeResponse)
 async def transcribe(req: TranscribeRequest):
+    # Groq first if configured - it's free and doesn't touch Gemini's
+    # tighter rate limit at all. Falls back to Gemini if no Groq key is
+    # set, or if Groq itself has a problem - so this never regresses
+    # behavior for anyone who hasn't set up a Groq key.
+    if settings.groq_api_key:
+        try:
+            text = await transcribe_audio_groq(req.audio_base64, req.mime_type)
+            return TranscribeResponse(text=text)
+        except ValueError as e:
+            if str(e) == "MISSING_GROQ_KEY":
+                pass  # shouldn't happen given the guard above, but fall through safely
+            elif str(e).startswith("INAUDIBLE"):
+                raise HTTPException(status_code=502, detail=str(e))
+            else:
+                logger.warning("Groq transcription failed, falling back to Gemini: %s", e)
+
     try:
         text = await transcribe_audio(req.audio_base64, req.mime_type)
     except ValueError as e:

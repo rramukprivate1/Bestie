@@ -18,8 +18,13 @@ from app.db.database import Base
 class EmotionLog(Base):
     __tablename__ = "emotion_logs"
 
+    # Composite primary key: message_id alone isn't safe here, since it's
+    # only guaranteed unique *within* one user's own Firestore subcollection,
+    # not globally - two accounts could theoretically share a message_id,
+    # and a message_id-only key would let one user's save silently
+    # overwrite another's.
+    user_id = Column(String, primary_key=True, index=True)
     message_id = Column(String, primary_key=True)
-    user_id = Column(String, nullable=False, index=True)
     emotion = Column(String, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 

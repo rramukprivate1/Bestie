@@ -102,17 +102,29 @@ async def chat(req: ChatRequest, background_tasks: BackgroundTasks):
     )
     history_for_llm = [{"role": t.role, "text": t.text} for t in req.history]
 
-    try:
-        raw_reply = await generate_reply(
-            system_instruction=system_instruction,
-            history=history_for_llm,
-            new_message=req.message,
-            temperature=req.temperature,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+    # A reply that's empty once the emotion tag is stripped out (rare, but
+    # seen in practice - the model occasionally returns almost nothing but
+    # the tag itself) would otherwise show up as a blank message bubble and
+    # then fail confusingly if voice mode tries to speak it. One retry
+    # clears this the vast majority of the time.
+    reply, emotion = "", None
+    for attempt in range(2):
+        try:
+            raw_reply = await generate_reply(
+                system_instruction=system_instruction,
+                history=history_for_llm,
+                new_message=req.message,
+                temperature=req.temperature if attempt == 0 else min(req.temperature + 0.1, 1.0),
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=502, detail=str(e))
 
-    reply, emotion = extract_emotion_tag(raw_reply)
+        reply, emotion = extract_emotion_tag(raw_reply)
+        if reply:
+            break
+
+    if not reply:
+        raise HTTPException(status_code=502, detail="EMPTY_REPLY: Gemini returned no usable text after retrying.")
 
     # 5. Fire-and-forget background work - none of this delays the response above.
     #    Note: this no longer costs a Gemini call at all (see emotion_tagger.py) -

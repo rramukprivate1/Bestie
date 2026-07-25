@@ -71,3 +71,60 @@ def test_speak_rejects_empty_text():
     response = client.post("/speak", json={"text": "   "})
     assert response.status_code == 400
     assert "EMPTY_TEXT" in response.json()["detail"]
+
+
+def test_transcribe_uses_groq_when_configured_and_never_touches_gemini(monkeypatch):
+    monkeypatch.setattr("app.config.settings.groq_api_key", "fake-groq-key")
+
+    async def fake_groq(audio_base64, mime_type):
+        return "using groq now"
+
+    async def gemini_should_not_be_called(audio_base64, mime_type):
+        raise AssertionError("Gemini transcription was called even though Groq succeeded")
+
+    monkeypatch.setattr("app.routes.voice.transcribe_audio_groq", fake_groq)
+    monkeypatch.setattr("app.routes.voice.transcribe_audio", gemini_should_not_be_called)
+
+    response = client.post("/transcribe", json={"audio_base64": "ZmFrZQ==", "mime_type": "audio/webm"})
+
+    assert response.status_code == 200
+    assert response.json() == {"text": "using groq now"}
+
+
+def test_transcribe_falls_back_to_gemini_if_groq_fails(monkeypatch):
+    monkeypatch.setattr("app.config.settings.groq_api_key", "fake-groq-key")
+
+    async def failing_groq(audio_base64, mime_type):
+        raise ValueError("GROQ_TRANSCRIBE_ERROR: service unavailable")
+
+    async def fake_gemini(audio_base64, mime_type):
+        return "gemini caught the fallback"
+
+    monkeypatch.setattr("app.routes.voice.transcribe_audio_groq", failing_groq)
+    monkeypatch.setattr("app.routes.voice.transcribe_audio", fake_gemini)
+
+    response = client.post("/transcribe", json={"audio_base64": "ZmFrZQ=="})
+
+    assert response.status_code == 200
+    assert response.json() == {"text": "gemini caught the fallback"}
+
+
+def test_transcribe_does_not_fall_back_on_genuine_inaudible(monkeypatch):
+    """An INAUDIBLE result from Groq means nothing was actually said - that's
+    a real answer, not a Groq failure, so retrying on Gemini would just waste
+    a call for the same (correct) outcome."""
+    monkeypatch.setattr("app.config.settings.groq_api_key", "fake-groq-key")
+
+    async def inaudible_groq(audio_base64, mime_type):
+        raise ValueError("INAUDIBLE: Could not make out any speech in that recording - try again.")
+
+    async def gemini_should_not_be_called(audio_base64, mime_type):
+        raise AssertionError("Should not fall back to Gemini for a genuine INAUDIBLE result")
+
+    monkeypatch.setattr("app.routes.voice.transcribe_audio_groq", inaudible_groq)
+    monkeypatch.setattr("app.routes.voice.transcribe_audio", gemini_should_not_be_called)
+
+    response = client.post("/transcribe", json={"audio_base64": "ZmFrZQ=="})
+
+    assert response.status_code == 502
+    assert "INAUDIBLE" in response.json()["detail"]

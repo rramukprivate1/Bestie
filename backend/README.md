@@ -1,6 +1,6 @@
-# Companion Backend (Phase 5)
+# Companion Backend (Phase 6)
 
-This is the part that holds your Gemini API key, builds every prompt, remembers things long-term via a real search index over past conversations (Phase 3), keeps each account's data separate (Phase 4), and — as of Phase 5 — handles real speech in and out. It's a small Python web service (FastAPI).
+This is the part that holds your Gemini API key, builds every prompt, remembers things long-term via a real search index over past conversations (Phase 3), keeps each account's data separate (Phase 4), handles real speech in and out (Phase 5), and — as of Phase 6 — powers the mood dashboard and lets journal entries and saved quotes become part of what it remembers. It's a small Python web service (FastAPI).
 
 ## 0. Install Python (if you haven't)
 
@@ -102,6 +102,14 @@ Both deliberately use the same `generateContent` REST pattern as the rest of thi
 
 One quirk worth knowing about, handled already: Gemini's TTS model occasionally returns text instead of audio on a given attempt. `voice_client.py` retries once automatically before giving up - if you ever see a `SPEAK_ERROR`, it already tried twice.
 
+## Transcription now prefers Groq, if you've set it up
+
+`/transcribe` tries **Groq's free Whisper API** first if `GROQ_API_KEY` is set in `.env` — it's fast, genuinely strong multilingually, and doesn't touch Gemini's tighter rate limit at all, freeing that up for replies and speech synthesis. Get a free key at [console.groq.com/keys](https://console.groq.com/keys) (no card required) and paste it into `.env` - nothing else changes; leave it blank and transcription keeps using Gemini exactly as before.
+
+If Groq is configured but fails for some reason (its own outage, a bad key), it falls back to Gemini automatically rather than surfacing an error - the one exception is a genuine "nothing intelligible was said," which isn't a failure to fall back from, just an honest answer.
+
+Either way, the transcribed text goes into the exact same `/chat` pipeline as anything typed - same memory indexing, same emotion tagging. Switching who transcribes changes nothing about what gets remembered.
+
 ## Rate limits — what they actually are, and what's been done about it
 
 The free tier is genuinely tight: roughly **10-15 requests per minute** for the flash model this app uses (check your exact current limits in Google AI Studio, since these do shift over time). It's easy to hit this faster than it sounds, for a reason worth understanding rather than just working around:
@@ -118,11 +126,19 @@ Two different error messages you might see mean two different things:
 - **`RATE_LIMIT`** — you've hit the per-minute cap above. Only fix: wait.
 - **`API_ERROR: ...experiencing high demand...`** — Gemini's own servers being temporarily overloaded, unrelated to your usage. `llm_client.py` already retries this automatically (twice, with a short pause) before ever surfacing it to you — if you still see it, Gemini itself was down for a few seconds longer than that.
 
+## What Phase 6 adds: mood insights and journal memory
+
+Two new endpoints:
+- **`GET /mood-summary`** — groups the emotion tags collected since Phase 3 by day, for the frontend's mood strip. Grouping happens in Python, not SQL, deliberately - Postgres and SQLite handle date functions differently, and doing it in Python means the exact same code works on either without dialect-specific branches.
+- **`POST /index-journal`** — embeds a journal entry or saved quote into the same per-user Chroma collection chat messages use, tagged by type (`entry` vs `quote`). This is what lets something you journaled, or a quote you saved, come up naturally in conversation later, exactly like anything you've said in chat.
+
+**A real bug this phase's tests caught:** `emotion_logs` originally used `message_id` alone as its primary key. That's only safe if message ids are globally unique across every account, which was never actually guaranteed — a test using the same id for two different (fake) users proved it: the second save silently overwrote the first. Fixed with a proper composite primary key (`user_id` + `message_id`) and a migration, tested against both SQLite and a real Postgres instance before being included here.
+
 ## Running the automated tests
 ```
 pytest
 ```
-Fifteen tests are included now, covering everything from Phases 2-5: the server boot, the missing-API-key error path, that something mentioned earlier gets correctly recalled later through memory search, that two different accounts' memories never mix, that both voice endpoints return well-formed results (the speech test actually decodes the returned audio as a real WAV file, not just checking for a plausible-looking string), that emotion tagging costs zero extra API calls (one test literally counts how many times the model gets called for a single message and asserts it's exactly one), and that a transient 503 gets retried while a 429 fails fast. All fifteen were passing before this project was handed to you.
+Thirty-three tests are included now, covering everything from Phases 2-6 plus this round of fixes: the server boot, the missing-API-key error path, that something mentioned earlier gets correctly recalled later through memory search, that two different accounts' memories (and moods) never mix, that both voice endpoints return well-formed results, that emotion tagging costs zero extra API calls, that a transient 503 gets retried while a 429 fails fast, that mood data groups correctly by day, that journal entries and saved quotes surface in later conversation, that a malformed or truncated emotion tag never leaks into a reply, that an empty-after-stripping reply gets one automatic retry, and that Groq transcription is tried first and falls back to Gemini correctly. All thirty-three were passing before this project was handed to you.
 
 ## Docker (optional — not required to keep developing day to day)
 
@@ -142,6 +158,46 @@ docker ps
 docker stop <container id from the list above>
 ```
 Also worth knowing: stopping it with Ctrl+C in an attached terminal used to require Docker to force-kill it after a few tries (`got 3 SIGTERM/SIGINTs, forcefully exiting`) - that was a real bug in the Dockerfile's shutdown handling (a shell-form `CMD` wasn't forwarding the stop signal to the actual server process), now fixed. If you built the image before this fix, rebuild it (`docker build -t companion-backend .` again) to pick up the corrected version.
+
+## Deploying to Cloud Run (so your Vercel-hosted frontend has something to talk to, permanently)
+
+This is what actually answers "do I need a backend running somewhere?" — yes, and this is where it lives 24/7 instead of only existing while your PC happens to be on. This is the most involved setup step in the whole project so far, worth doing once properly rather than rushing.
+
+### One-time manual deploy
+
+You don't need to install anything locally for this - **Cloud Shell** (a terminal built into the Google Cloud Console, already logged into your account) has everything needed already.
+
+1. Go to **[console.cloud.google.com](https://console.cloud.google.com)**, sign in.
+2. You likely already have a usable project - Firebase projects *are* Google Cloud projects underneath. Find its project ID in the Firebase Console (Project settings, gear icon, near the top) or just create a new one here if you'd rather keep them separate.
+3. **Enable billing** on that project (Billing, left sidebar) - Cloud Run's free tier is generous (2 million requests/month), but the option to use it requires a card on file regardless. This is different from your Gemini key, which needed none.
+4. Click the **Cloud Shell** icon (`>_`) near the top right. A terminal opens at the bottom of the page.
+5. Clone your repo and deploy:
+```
+git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+cd YOUR_REPO_NAME/backend
+gcloud config set project YOUR_PROJECT_ID
+gcloud run deploy companion-backend --source . --region us-central1 --allow-unauthenticated
+```
+Say yes when it asks to enable APIs (Cloud Run, Cloud Build, Artifact Registry) - first deploy takes a few minutes, since it's building your Docker image via Cloud Build behind the scenes (the same `Dockerfile`, no separate push step needed).
+6. When it finishes, it prints a URL like `https://companion-backend-xxxxx-uc.a.run.app` - that's your backend's permanent address.
+7. **Set your environment variables**: Cloud Console → Cloud Run → `companion-backend` → **Edit & Deploy New Revision** → **Variables & Secrets** tab. Add `GEMINI_API_KEY`, `GROQ_API_KEY` (if using it), `CORS_ORIGINS` (your Vercel domain, e.g. `https://your-project.vercel.app`), and, if you're using Neon, `DATABASE_URL` / `DATABASE_URL_UNPOOLED`. The Console UI avoids any shell-escaping headaches with commas in `CORS_ORIGINS`.
+8. **Point Vercel at this URL**: set `VITE_API_BASE_URL` to the Cloud Run URL from step 6 (Vercel dashboard → Settings → Environment Variables, or `vercel env add`), then `vercel --prod` to redeploy with it applied. The `ngrok` workaround from earlier is no longer needed - this URL doesn't change on its own.
+
+### Automating redeploys with GitHub Actions
+
+`.github/workflows/deploy.yml` is already written and waiting - it runs `gcloud run deploy` automatically whenever you push a change to `backend/` on `main`. It needs a way to authenticate as *you* to GCP, which means a service account:
+
+1. **Cloud Console → IAM & Admin → Service Accounts → Create Service Account.** Any name (e.g. `github-deployer`).
+2. Grant it these roles: **Cloud Run Admin**, **Cloud Build Editor**, **Service Account User**, **Artifact Registry Writer**.
+3. Open the new service account → **Keys** tab → **Add Key → Create new key → JSON**. This downloads a `.json` file - treat it like a password, never commit it to the repo.
+4. In your GitHub repo: **Settings → Secrets and variables → Actions → New repository secret**. Add each of these one at a time:
+   - `GCP_PROJECT_ID` — your project ID
+   - `GCP_SA_KEY` — paste the *entire contents* of that downloaded JSON file
+   - `GEMINI_API_KEY`, `GROQ_API_KEY`, `CORS_ORIGINS` — same values as Cloud Run's env vars above
+   - `DATABASE_URL`, `DATABASE_URL_UNPOOLED` — only if using Neon; leave them out (or empty) otherwise, SQLite is the default either way
+5. Push any change to `backend/` on `main` and check the **Actions** tab on GitHub - you should see "Deploy Backend to Cloud Run" run automatically.
+
+From here on, `git push` is how you deploy - no manual `gcloud run deploy` needed again unless something's gone wrong and you want to run it by hand to see the output directly.
 
 ## Troubleshooting
 

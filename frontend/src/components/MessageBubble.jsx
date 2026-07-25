@@ -14,6 +14,7 @@ export default function MessageBubble({ message, onTogglePin, onError }) {
   });
 
   const handleSpeak = async () => {
+    if (!message.text.trim()) return;
     if (voiceState === 'playing') {
       audioRef.current?.pause();
       setVoiceState('idle');

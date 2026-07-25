@@ -1,0 +1,47 @@
+# Automatically redeploys the backend to Cloud Run whenever backend/ changes
+# on main. This is automation ON TOP OF a real host (Cloud Run) - GitHub
+# Actions itself never runs your live server; it just tells Cloud Run to
+# build and deploy a new version. See backend/README.md's "Deploying to
+# Cloud Run" section for the one-time setup this depends on (a GCP service
+# account + these secrets in your repo's Settings -> Secrets and variables
+# -> Actions): GCP_PROJECT_ID, GCP_SA_KEY, GEMINI_API_KEY, GROQ_API_KEY,
+# CORS_ORIGINS, and (only if you're using Neon) DATABASE_URL / DATABASE_URL_UNPOOLED.
+
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        working-directory: backend
+        run: |
+          gcloud run deploy companion-backend \
+            --source . \
+            --region us-central1 \
+            --project "${{ secrets.GCP_PROJECT_ID }}" \
+            --allow-unauthenticated \
+            --quiet \
+            --set-env-vars "^##^GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}##GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}##CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}##DATABASE_URL=${{ secrets.DATABASE_URL }}##DATABASE_URL_UNPOOLED=${{ secrets.DATABASE_URL_UNPOOLED }}"
+          # The "^##^" prefix tells gcloud to split on "##" instead of the
+          # usual comma - needed because CORS_ORIGINS itself is a
+          # comma-separated list, which would otherwise be parsed as
+          # multiple separate variables. If you aren't using Neon yet,
+          # leave those two secrets empty in GitHub - blank values are fine,
+          # the backend already treats an empty DATABASE_URL as "use SQLite".

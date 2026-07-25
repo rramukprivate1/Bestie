@@ -7,6 +7,8 @@ emotion_tagger) call these instead of touching SQLAlchemy sessions
 themselves.
 """
 
+from datetime import datetime
+
 from app.db import database
 from app.db.sql_models import EmotionLog, MemorySummary
 
@@ -42,5 +44,20 @@ def save_summary(user_id: str, summary_text: str, message_count: int) -> None:
             )
         )
         session.commit()
+    finally:
+        session.close()
+
+
+def get_recent_emotions(user_id: str, since: datetime) -> list[EmotionLog]:
+    """Raw rows only - grouping by day happens in Python (see routes/mood.py),
+    not SQL, so this works identically whether you're on SQLite or Postgres."""
+    session = database.get_session()
+    try:
+        return (
+            session.query(EmotionLog)
+            .filter(EmotionLog.user_id == user_id, EmotionLog.created_at >= since)
+            .order_by(EmotionLog.created_at.asc())
+            .all()
+        )
     finally:
         session.close()

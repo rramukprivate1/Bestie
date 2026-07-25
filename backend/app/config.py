@@ -14,6 +14,11 @@ load_dotenv()
 
 class Settings:
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    # Optional - if set, voice transcription uses Groq's free, fast Whisper
+    # API instead of Gemini, freeing up Gemini's tighter rate limit for
+    # replies and speech synthesis. Falls back to Gemini automatically if
+    # this isn't set - see routes/voice.py.
+    groq_api_key: str = os.getenv("GROQ_API_KEY", "")
     cors_origins: list[str] = [
         origin.strip()
         for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")

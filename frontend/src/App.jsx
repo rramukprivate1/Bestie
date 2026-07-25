@@ -1,12 +1,19 @@
+import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './hooks/useAuth';
 import { useChat } from './hooks/useChat';
+import { useJournal } from './hooks/useJournal';
 import LoginScreen from './components/LoginScreen';
 import ChatWindow from './components/ChatWindow';
+import JournalView from './components/JournalView';
+import InsightsView from './components/InsightsView';
+import BottomNav from './components/BottomNav';
 
 export default function App() {
   const auth = useAuth();
   const chat = useChat(auth.uid, auth.cryptoKey, auth.profileSummary);
+  const journal = useJournal(auth.uid, auth.cryptoKey);
+  const [activeTab, setActiveTab] = useState('chat');
 
   const isUnlocked = auth.status === 'unlocked';
 
@@ -15,14 +22,21 @@ export default function App() {
       <AnimatePresence mode="wait">
         {isUnlocked ? (
           <motion.div
-            key="chat"
+            key="app"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="h-full"
+            className="h-full flex flex-col"
           >
-            <ChatWindow chat={chat} onLogout={auth.logOut} />
+            <div className="flex-1 min-h-0">
+              {activeTab === 'chat' && <ChatWindow chat={chat} onLogout={auth.logOut} />}
+              {activeTab === 'journal' && <JournalView journal={journal} />}
+              {activeTab === 'insights' && (
+                <InsightsView uid={auth.uid} messages={chat.messages} journalEntries={journal.entries} />
+              )}
+            </div>
+            <BottomNav active={activeTab} onChange={setActiveTab} />
           </motion.div>
         ) : (
           <motion.div
