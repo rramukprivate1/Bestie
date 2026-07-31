@@ -37,7 +37,7 @@ async def generate_reply(
     body = {
         "systemInstruction": {"parts": [{"text": system_instruction}]},
         "contents": contents,
-        "generationConfig": {"temperature": temperature, "topP": 0.92, "maxOutputTokens": 800},
+        "generationConfig": {"temperature": temperature, "topP": 0.92, "maxOutputTokens": 2048},
     }
 
     resp = await _post_with_overload_retry(body)

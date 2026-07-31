@@ -6,15 +6,15 @@
   and it updates everywhere it's used.
 */
 @theme {
-  --color-deep: #1e1b2e;       /* main background */
-  --color-surface: #2a2440;    /* message bubbles, cards */
-  --color-surface-2: #352d4d;  /* input bar, raised elements */
-  --color-warm: #e8927c;       /* companion's presence, warmth */
-  --color-calm: #7fa8a0;       /* secondary accent, session dividers */
-  --color-cream: #f3eee7;      /* primary text */
-  --color-muted: #a79fbd;      /* secondary text, timestamps */
+  --color-deep: #f0f4fa;        /* main background — soft sky */
+  --color-surface: #ffffff;     /* message bubbles, cards — clean white */
+  --color-surface-2: #e8edf6;   /* input bar, raised elements — pale blue */
+  --color-warm: #e07a72;        /* companion accent — warm peach-rose */
+  --color-calm: #5e8fbd;        /* dividers, secondary — muted blue */
+  --color-cream: #1e2a3a;       /* primary text — deep navy (readable on white) */
+  --color-muted: #7a8faa;       /* timestamps, secondary text */
 
-  --font-display: "Fraunces", serif;
+  --font-display: "DM Serif Display", serif;
   --font-body: "Plus Jakarta Sans", sans-serif;
 }
 
