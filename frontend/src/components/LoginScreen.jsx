@@ -52,6 +52,15 @@ export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="max-w-sm mx-auto w-full"
       >
+      <div className="mb-6 pb-5 border-b border-surface-2">
+  <p className="text-sm text-muted leading-relaxed">
+    <span className="text-cream font-medium">Pocket Bestie</span> is your pocket AI companion — it remembers your
+    stories and your mood, and talks with you by text or voice, anytime you need it. 
+    Share your FRUSTRATIONS, REGRETS, OBSESSIONS, CONFESSIONS, PROMISES, STORIES, THOUGHTS AND EVERYTHING. 
+    Things that can't be shared with known persons, you may share them here by making this companion as that person you have in mind.
+    Give a try talking to this STRANGER.
+  </p>
+</div>
         <h1 className="font-display text-4xl text-cream mb-2">{isSignup ? 'Create your account' : 'Welcome back'}</h1>
         <p className="text-muted mb-8 text-sm leading-relaxed">
           {isSignup
