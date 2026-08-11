@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
+import EmotionalHook from './EmotionalHook';
 
 export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [mode, setMode] = useState('signup'); // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -61,6 +62,7 @@ export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
     Give a try talking to this STRANGER.
   </p>
 </div>
+{isSignup && <EmotionalHook />}
         <h1 className="font-display text-4xl text-cream mb-2">{isSignup ? 'Create your account' : 'Welcome back'}</h1>
         <p className="text-muted mb-8 text-sm leading-relaxed">
           {isSignup

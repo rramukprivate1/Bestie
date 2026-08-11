@@ -61,12 +61,20 @@ export async function sendMessage({
 
 /** Fetches day-by-day emotion data for the Insights view's mood strip. */
 export async function getMoodSummary(userId, days = 14) {
-  const response = await fetch(`${API_BASE}/mood-summary?user_id=${encodeURIComponent(userId)}&days=${days}`);
-  if (!response.ok) {
-    throw new Error(`Could not load mood history (status ${response.status})`);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await fetch(`${API_BASE}/mood-summary?user_id=${encodeURIComponent(userId)}&days=${days}`);
+      if (!response.ok) throw new Error(`Could not load mood history (status ${response.status})`);
+      const data = await response.json();
+      return data.days;
+    } catch (err) {
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 2000)); // give a cold container a moment
+        continue;
+      }
+      throw err;
+    }
   }
-  const data = await response.json();
-  return data.days;
 }
 
 /** Embeds a journal entry or saved quote into memory so it can come up naturally in conversation. */
