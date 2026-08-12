@@ -57,9 +57,6 @@ export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
   <p className="text-sm text-muted leading-relaxed">
     <span className="text-cream font-medium">Pocket Bestie</span> is your pocket AI companion — it remembers your
     stories and your mood, and talks with you by text or voice, anytime you need it. 
-    Share your FRUSTRATIONS, REGRETS, OBSESSIONS, CONFESSIONS, PROMISES, STORIES, THOUGHTS AND EVERYTHING. 
-    Things that can't be shared with known persons, you may share them here by making this companion as that person you have in mind.
-    Give a try talking to this STRANGER.
   </p>
 </div>
 {isSignup && <EmotionalHook />}
