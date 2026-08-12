@@ -21,6 +21,19 @@ API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:gene
 # again since the per-minute window hasn't passed, so that one fails fast.
 OVERLOAD_RETRY_DELAYS_SECONDS = [1, 2]
 
+# Deliberately conservative - keeps this comfortably inside the free
+# 5,000 grounded-queries/month allowance rather than searching by default.
+CURRENT_INFO_SIGNALS = [
+    "news", "today", "latest", "recent", "recently", "currently",
+    "this week", "this month", "yesterday", "happening", "happened",
+    "election", "who won", "score", "result", "announced", "announcement",
+    "update on", "heard about", "did you hear",
+]
+
+
+def _might_need_current_info(message: str) -> bool:
+    lowered = message.lower()
+    return any(signal in lowered for signal in CURRENT_INFO_SIGNALS)
 
 async def generate_reply(
     system_instruction: str,
@@ -39,6 +52,9 @@ async def generate_reply(
         "contents": contents,
         "generationConfig": {"temperature": temperature, "topP": 0.92, "maxOutputTokens": 2048},
     }
+    
+    if _might_need_current_info(new_message):
+        body["tools"] = [{"google_search": {}}]
 
     resp = await _post_with_overload_retry(body)
 
