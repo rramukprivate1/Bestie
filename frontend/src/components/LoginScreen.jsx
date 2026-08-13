@@ -8,6 +8,7 @@ export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [profileText, setProfileText] = useState('');
+  const [showProfileField, setShowProfileField] = useState(false);
   const [localError, setLocalError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -40,7 +41,7 @@ export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
 
   return (
     <div className="h-full overflow-y-auto bg-deep">
-      <div className="min-h-full flex flex-col justify-center px-6 py-8">
+      <div className="min-h-full flex flex-col justify-center px-5 py-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -49,8 +50,8 @@ export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
         >
           {isSignup && <EmotionalHook />}
 
-          <div className="flex items-center justify-between mb-5 gap-3">
-            <h1 className="font-display text-3xl text-cream">{isSignup ? 'Create your account' : 'Welcome back'}</h1>
+          <div className="flex items-center justify-between mb-1.5 gap-3">
+            <h1 className="font-display text-2xl text-cream">{isSignup ? 'Create your account' : 'Welcome back'}</h1>
             <button
               type="button"
               onClick={() => { setMode(isSignup ? 'login' : 'signup'); setLocalError(''); }}
@@ -60,54 +61,60 @@ export default function LoginScreen({ status, error, onSignUp, onLogIn }) {
             </button>
           </div>
 
-          <p className="text-muted mb-6 text-sm leading-relaxed">
-            {isSignup ? 'This is what lets the same memory follow you to another device.' : 'Sign in to pick up where you left off, on any device.'}
+          <p className="text-muted mb-4 text-xs leading-relaxed">
+            {isSignup ? 'Lets your memory follow you to another device.' : 'Pick up where you left off, on any device.'}
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="text-xs uppercase tracking-wide text-muted mb-1.5 block">Email</label>
+              <label className="text-[11px] uppercase tracking-wide text-muted mb-1 block">Email</label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-surface text-cream rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50"
+                className="w-full bg-surface text-cream rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50 text-sm"
                 placeholder="you@example.com" autoFocus />
             </div>
 
             <div>
-              <label className="text-xs uppercase tracking-wide text-muted mb-1.5 block">Password</label>
+              <label className="text-[11px] uppercase tracking-wide text-muted mb-1 block">Password</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-surface text-cream rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50"
+                className="w-full bg-surface text-cream rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50 text-sm"
                 placeholder="••••••••" />
             </div>
 
             {isSignup && (
               <>
                 <div>
-                  <label className="text-xs uppercase tracking-wide text-muted mb-1.5 block">Confirm password</label>
+                  <label className="text-[11px] uppercase tracking-wide text-muted mb-1 block">Confirm password</label>
                   <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full bg-surface text-cream rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50"
+                    className="w-full bg-surface text-cream rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50 text-sm"
                     placeholder="••••••••" />
                 </div>
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-muted mb-1.5 block">
-                    Tell it about yourself <span className="normal-case text-muted/70">(optional, skippable)</span>
-                  </label>
-                  <textarea value={profileText} onChange={(e) => setProfileText(e.target.value)} rows={3}
-                    className="w-full bg-surface text-cream rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50 resize-none text-sm leading-relaxed"
-                    placeholder="Your age, work, what's going on lately - in your own words." />
-                </div>
+
+                {!showProfileField ? (
+                  <button type="button" onClick={() => setShowProfileField(true)}
+                    className="text-xs text-calm hover:text-cream transition-colors underline underline-offset-2">
+                    + Tell it about yourself (optional)
+                  </button>
+                ) : (
+                  <div>
+                    <label className="text-[11px] uppercase tracking-wide text-muted mb-1 block">About you (optional)</label>
+                    <textarea value={profileText} onChange={(e) => setProfileText(e.target.value)} rows={2}
+                      className="w-full bg-surface text-cream rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-warm/60 placeholder:text-muted/50 resize-none text-sm leading-relaxed"
+                      placeholder="Your age, work, what's going on lately…" />
+                  </div>
+                )}
               </>
             )}
 
-            {(localError || error) && <p className="text-warm text-sm">{localError || error}</p>}
+            {(localError || error) && <p className="text-warm text-xs">{localError || error}</p>}
 
             <button type="submit" disabled={submitting || !email || !password}
-              className="w-full bg-warm text-deep font-medium rounded-xl py-3 mt-2 disabled:opacity-50 transition-opacity">
+              className="w-full bg-warm text-deep font-medium rounded-xl py-2.5 mt-1 disabled:opacity-50 transition-opacity text-sm">
               {submitting ? 'One sec…' : isSignup ? 'Create account' : 'Sign in'}
             </button>
 
             {isSignup && (
-              <p className="text-muted/70 text-xs text-center pt-1 leading-relaxed">
-                There's no way to recover your data if you forget this password — it's what encrypts everything, not just what logs you in.
+              <p className="text-muted/70 text-[11px] text-center leading-relaxed">
+                No password recovery — it's what encrypts your data, not just what logs you in.
               </p>
             )}
           </form>

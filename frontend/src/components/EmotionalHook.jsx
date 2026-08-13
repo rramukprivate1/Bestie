@@ -1,4 +1,3 @@
-// EmotionalHook.jsx
 const PHRASES = [
   { text: 'Frustrations', tone: 'warm' },
   { text: 'Regrets', tone: 'calm' },
@@ -10,16 +9,16 @@ const PHRASES = [
 
 export default function EmotionalHook() {
   return (
-    <div className="mb-7">
-      <p className="text-[13px] tracking-widest uppercase text-calm font-medium mb-2">Your pocket person</p>
-      <h2 className="font-display text-2xl text-cream leading-snug mb-4">
-        Some things are easier<br />to tell a stranger.
+    <div className="mb-5">
+      <p className="text-[11px] tracking-widest uppercase text-calm font-medium mb-1.5">Your pocket person</p>
+      <h2 className="font-display text-xl text-cream leading-snug mb-3">
+        Some things are easier to tell a stranger.
       </h2>
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-1.5 mb-3">
         {PHRASES.map((p, i) => (
           <span
             key={p.text}
-            className={`cloud-chip inline-block px-3.5 py-1.5 rounded-full text-[13px] font-medium ${
+            className={`cloud-chip inline-block px-2.5 py-1 rounded-full text-xs font-medium ${
               p.tone === 'warm' ? 'bg-warm/15 text-warm' : 'bg-calm/15 text-calm'
             }`}
             style={{ animationDelay: `${i * 0.4}s` }}
@@ -28,8 +27,8 @@ export default function EmotionalHook() {
           </span>
         ))}
       </div>
-      <p className="text-sm text-muted leading-relaxed">
-        No judgement. No history with you. Nowhere else it goes. Just say it — Bestie's listening.
+      <p className="text-xs text-muted leading-relaxed">
+        No judgement. Nowhere else it goes. Just say it — Bestie's listening.
       </p>
       <style>{`
         @keyframes float-cloud { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
